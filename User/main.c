@@ -18,6 +18,7 @@ int main(void)
 	while(1)
 	{
 		//MP6532_Step();
+		GPIO_Write(LED_GPIO, LED_RED_PIN, MP6532_IsFaulted());
 		CORE_Idle();
 	}
 }
