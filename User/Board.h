@@ -25,6 +25,7 @@
 #define UART1_PINS		(GPIO_PIN_9 | GPIO_PIN_10)
 #define UART1_AF		GPIO_AF4_USART1
 #define COM_UART		UART_1
+#define COM_BAUD		115200
 
 // MP6532
 #define MP6532_GPIO			GPIOA
@@ -51,5 +52,7 @@
 #define LED_GPIO			GPIOC
 #define LED_GRN_PIN			GPIO_PIN_14
 #define LED_RED_PIN			GPIO_PIN_15
+
+#define CTL_TIM				TIM_22
 
 #endif /* BOARD_H */
