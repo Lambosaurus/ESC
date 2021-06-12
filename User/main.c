@@ -70,7 +70,6 @@ int main(void)
 
 	while(1)
 	{
-		/*
 		char bfr[32];
 		uint32_t read = UART_Read(COM_UART, (uint8_t*)bfr, sizeof(bfr));
 		if (read)
@@ -79,11 +78,10 @@ int main(void)
 		}
 
 		GPIO_Write(LED_GPIO, LED_RED_PIN, MP6532_IsFaulted());
-		CORE_Idle();
-		*/
+		//CORE_Idle();
 
-		CORE_Delay(500);
-		char bfr[32];
+		CORE_Delay(250);
+
 		uint32_t size = snprintf(bfr, sizeof(bfr), "Delta = %d\r\n", (int)gDelta);
 		UART_Write(COM_UART, (uint8_t *)bfr, size);
 	}

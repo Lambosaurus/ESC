@@ -33,7 +33,7 @@ void Line_Parse(LineParser_t * line, char * read, uint32_t count)
 {
 	while(count--)
 	{
-		char ch = *read--;
+		char ch = *read++;
 		switch (ch)
 		{
 		case '\n':
