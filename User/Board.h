@@ -47,6 +47,7 @@
 
 // COMP config
 #define COMP2_ENABLE
+#define COMP_USE_IRQS
 
 // LEDs
 #define LED_GPIO			GPIOC

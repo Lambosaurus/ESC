@@ -5,7 +5,9 @@
 #include "MP6532.h"
 #include "UART.h"
 #include "TIM.h"
+#include "COMP.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "Line.h"
 
@@ -38,6 +40,16 @@ void Main_HandleLine(char * line)
 	TIM_SetFreq(HALL_TIM, freq * HALL_RLD * 6);
 }
 
+static uint32_t gLast = 0;
+static uint32_t gDelta = 0;
+
+static void Main_OnComp(void)
+{
+	uint32_t now = CORE_GetTick();
+	gDelta = now - gLast;
+	gLast = now;
+}
+
 int main(void)
 {
 	CORE_Init();
@@ -53,8 +65,12 @@ int main(void)
 	TIM_OnReload(HALL_TIM, MP6532_Step);
 	TIM_Start(HALL_TIM);
 
+	COMP_Init(COMP_2, COMP_Pos_IO2 | COMP_Neg_IO2);
+	COMP_OnChange(COMP_2, GPIO_IT_Rising, Main_OnComp);
+
 	while(1)
 	{
+		/*
 		char bfr[32];
 		uint32_t read = UART_Read(COM_UART, (uint8_t*)bfr, sizeof(bfr));
 		if (read)
@@ -64,6 +80,12 @@ int main(void)
 
 		GPIO_Write(LED_GPIO, LED_RED_PIN, MP6532_IsFaulted());
 		CORE_Idle();
+		*/
+
+		CORE_Delay(500);
+		char bfr[32];
+		uint32_t size = snprintf(bfr, sizeof(bfr), "Delta = %d\r\n", (int)gDelta);
+		UART_Write(COM_UART, (uint8_t *)bfr, size);
 	}
 }
 
