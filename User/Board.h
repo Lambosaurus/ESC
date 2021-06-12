@@ -17,12 +17,14 @@
 
 // TIM config
 #define TIM_USE_IRQS
+#define TIM21_ENABLE
 #define TIM22_ENABLE
 
 // UART config
 #define UART1_GPIO		GPIOA
 #define UART1_PINS		(GPIO_PIN_9 | GPIO_PIN_10)
-#define UART1_AF		    GPIO_AF4_USART1
+#define UART1_AF		GPIO_AF4_USART1
+#define COM_UART		UART_1
 
 // MP6532
 #define MP6532_GPIO			GPIOA
