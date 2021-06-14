@@ -10,7 +10,7 @@
 
 #define BLDC_COMP		COMP_2
 #define BLDC_COMP_CHA	(COMP_Pos_IO2 | COMP_Neg_IO2)
-#define BLDC_COMP_CHB	(COMP_Pos_IO3 | COMP_Neg_IO2)
+#define BLDC_COMP_CHB	(COMP_Pos_IO5 | COMP_Neg_IO2)
 #define BLDC_COMP_CHC	(COMP_Pos_IO4 | COMP_Neg_IO2)
 
 /*
@@ -68,8 +68,10 @@ void BLDC_Start(uint32_t freq)
 	if (gBLDC.state == BLDC_State_Idle)
 	{
 		gBLDC.start.time = CORE_GetTick();
-		gBLDC.start.period = 1000 / freq;
+		gBLDC.start.period = 6000 / freq;
 		gBLDC.start.steps = 12;
+		gBLDC.state = BLDC_State_Starting;
+		MP6532_SetDuty(gBLDC.power);
 	}
 }
 
@@ -155,6 +157,7 @@ static void BLDC_ExitRunMode(void)
 
 static void BLDC_CompIRQ(void)
 {
+	gBLDC.start.time = CORE_GetTick();
 	COMP_Deinit(BLDC_COMP);
 	Phase_t phase = MP6532_Step();
 	BLDC_ConfigComp(phase);
