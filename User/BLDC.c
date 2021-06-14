@@ -122,8 +122,9 @@ void BLDC_Update(void)
 			{
 				gBLDC.start.time = now;
 				Phase_t phase = MP6532_Step();
-				gBLDC.start.steps -= 1;
-				if (gBLDC.start.steps == 0)
+
+				gBLDC.start.period -= 1;
+				if (gBLDC.start.period == 0)
 				{
 					gBLDC.state = BLDC_State_Running;
 					BLDC_EnterRunMode(phase);
@@ -131,7 +132,7 @@ void BLDC_Update(void)
 			}
 			break;
 		case BLDC_State_Running:
-			if (now - gBLDC.start.time > (gBLDC.start.period * 2))
+			if (now - gBLDC.start.time > 10)
 			{
 				// Stalled out.
 				BLDC_Stop();
