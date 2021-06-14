@@ -11,15 +11,6 @@
 #define PWM_FREQ			20000
 #define PWM_RES				255
 
-typedef enum {
-	Phase_A,
-	Phase_AB,
-	Phase_B,
-	Phase_BC,
-	Phase_C,
-	Phase_CA,
-} Phase_t;
-
 /*
  * PRIVATE TYPES
  */
@@ -88,7 +79,7 @@ void MP6532_EnterPhaseA(void)
 	GPIO_Set(MP6532_GPIO, MP6532_HA_PIN);
 }
 
-void MP6532_Step(void)
+Phase_t MP6532_Step(void)
 {
 	if (++gState.phase > Phase_CA)
 	{
@@ -116,6 +107,8 @@ void MP6532_Step(void)
 		GPIO_Set(MP6532_GPIO, MP6532_HA_PIN);
 		break;
 	}
+
+	return gState.phase;
 }
 
 /*

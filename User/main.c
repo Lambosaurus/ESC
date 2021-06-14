@@ -2,14 +2,12 @@
 #include "Core.h"
 #include "GPIO.h"
 
-#include "MP6532.h"
 #include "UART.h"
-#include "TIM.h"
-#include "COMP.h"
 #include <stdlib.h>
 #include <stdio.h>
 
 #include "Line.h"
+#include "BLDC.h"
 
 #define CLAMP(v, low, high) (v < low ? low : (v > high ? high : v))
 
@@ -34,20 +32,10 @@ void Main_HandleLine(char * line)
 	}
 
 	pwm = CLAMP(pwm, 0, 255);
-	freq = CLAMP(freq, 1, 30000);
+	freq = CLAMP(freq, 1, 1000);
 
-	MP6532_SetDuty(pwm);
-	TIM_SetFreq(HALL_TIM, freq * HALL_RLD * 6);
-}
-
-static uint32_t gLast = 0;
-static uint32_t gDelta = 0;
-
-static void Main_OnComp(void)
-{
-	uint32_t now = CORE_GetTick();
-	gDelta = now - gLast;
-	gLast = now;
+	BLDC_SetPower(pwm);
+	BLDC_Start(freq);
 }
 
 int main(void)
@@ -59,33 +47,33 @@ int main(void)
 	UART_Init(COM_UART, COM_BAUD);
 	Line_Init(&gLine, gLineBuffer, sizeof(gLineBuffer), Main_HandleLine);
 
-	MP6532_Init();
+	BLDC_Init();
 
-	TIM_Init(HALL_TIM, HALL_RLD, HALL_RLD);
-	TIM_OnReload(HALL_TIM, MP6532_Step);
-	TIM_Start(HALL_TIM);
-
-	COMP_Init(COMP_2, COMP_Pos_IO2 | COMP_Neg_IO2);
-	COMP_OnChange(COMP_2, GPIO_IT_Rising, Main_OnComp);
+	uint32_t tide = CORE_GetTick();
 
 	while(1)
 	{
-		/*
+		uint32_t now = CORE_GetTick();
+
 		char bfr[32];
 		uint32_t read = UART_Read(COM_UART, (uint8_t*)bfr, sizeof(bfr));
 		if (read)
 		{
 			Line_Parse(&gLine, bfr, read);
 		}
+		if (now - tide > 500)
+		{
+			uint32_t rate = BLDC_GetRPM();
+			tide = now;
+			snprintf(bfr, sizeof(bfr), "Rate: %d\r\n", (int)rate);
+			UART_WriteStr(COM_UART, bfr);
+		}
 
-		GPIO_Write(LED_GPIO, LED_RED_PIN, MP6532_IsFaulted());
+		BLDC_Update();
+		BLDC_State_t state = BLDC_GetState();
+
+		GPIO_Write(LED_GPIO, LED_RED_PIN, state == BLDC_State_Fault);
 		CORE_Idle();
-		*/
-
-		CORE_Delay(500);
-		char bfr[32];
-		uint32_t size = snprintf(bfr, sizeof(bfr), "Delta = %d\r\n", (int)gDelta);
-		UART_Write(COM_UART, (uint8_t *)bfr, size);
 	}
 }
 
