@@ -188,6 +188,7 @@ static void BLDC_ConfigComp(Phase_t phase)
 		break;
 	}
 
+	/*
 	// Wait for comparator to settle.
 	for (int i = 20; i > 0; i--)
 	{
@@ -197,6 +198,9 @@ static void BLDC_ConfigComp(Phase_t phase)
 			i -= 2;
 		}
 	}
+	*/
+
+	CORE_DelayUs(10);
 
 	COMP_OnChange(BLDC_COMP, GPIO_IT_Rising, BLDC_CompIRQ);
 }

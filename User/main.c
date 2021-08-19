@@ -44,7 +44,7 @@ int main(void)
 	GPIO_EnableOutput(LED_GPIO, LED_GRN_PIN, GPIO_PIN_SET);
 	GPIO_EnableOutput(LED_GPIO, LED_RED_PIN, GPIO_PIN_RESET);
 
-	UART_Init(COM_UART, COM_BAUD);
+	UART_Init(COM_UART, COM_BAUD, UART_Mode_Default);
 	Line_Init(&gLine, gLineBuffer, sizeof(gLineBuffer), Main_HandleLine);
 
 	BLDC_Init();
