@@ -3,6 +3,7 @@
 #include "MP6532.h"
 #include "Core.h"
 #include "COMP.h"
+#include "TIM.h"
 
 /*
  * PRIVATE DEFINITIONS
@@ -12,6 +13,9 @@
 #define BLDC_COMP_CHA	(COMP_Pos_IO2 | COMP_Neg_IO2)
 #define BLDC_COMP_CHB	(COMP_Pos_IO5 | COMP_Neg_IO2)
 #define BLDC_COMP_CHC	(COMP_Pos_IO4 | COMP_Neg_IO2)
+
+#define BLDC_TIM		TIM_22
+#define BLDC_RLD		256
 
 /*
  * PRIVATE TYPES
@@ -26,6 +30,8 @@ static void BLDC_ExitRunMode(void);
 static void BLDC_CompIRQ(void);
 static void BLDC_ConfigComp(Phase_t phase);
 
+static void BLDC_Tick(void);
+
 /*
  * PRIVATE VARIABLES
  */
@@ -35,9 +41,11 @@ static struct {
 	uint8_t power;
 	struct {
 		uint32_t time;
-		uint32_t period;
 		uint32_t steps;
+		uint32_t freq;
 	} start;
+	uint32_t comps;
+	uint32_t delay;
 } gBLDC;
 
 /*
@@ -47,6 +55,8 @@ static struct {
 void BLDC_Init(void)
 {
 	MP6532_Init();
+	TIM_Init(BLDC_TIM, BLDC_RLD, BLDC_RLD);
+	TIM_OnReload(BLDC_TIM, BLDC_Tick);
 }
 
 uint32_t BLDC_GetRPM(void)
@@ -68,21 +78,25 @@ void BLDC_Start(uint32_t freq)
 	if (gBLDC.state == BLDC_State_Idle)
 	{
 		gBLDC.start.time = CORE_GetTick();
-		gBLDC.start.period = 6000 / freq;
 		gBLDC.start.steps = 12;
+		gBLDC.start.freq = freq;
 		gBLDC.state = BLDC_State_Starting;
 		MP6532_SetDuty(gBLDC.power);
+		TIM_SetFreq(BLDC_TIM, BLDC_RLD * freq);
+		TIM_Start(BLDC_TIM);
 	}
 }
 
 void BLDC_Stop(void)
 {
+	TIM_Stop(BLDC_TIM);
+	BLDC_ExitRunMode();
+	MP6532_SetDuty(0);
+
 	if (gBLDC.state != BLDC_State_Fault)
 	{
 		gBLDC.state = BLDC_State_Idle;
 	}
-	BLDC_ExitRunMode();
-	MP6532_SetDuty(0);
 }
 
 BLDC_State_t BLDC_GetState(void)
@@ -118,18 +132,6 @@ void BLDC_Update(void)
 		case BLDC_State_Idle:
 			break;
 		case BLDC_State_Starting:
-			if (now - gBLDC.start.time >= gBLDC.start.period)
-			{
-				gBLDC.start.time = now;
-				Phase_t phase = MP6532_Step();
-
-				gBLDC.start.period -= 1;
-				if (gBLDC.start.period == 0)
-				{
-					gBLDC.state = BLDC_State_Running;
-					BLDC_EnterRunMode(phase);
-				}
-			}
 			break;
 		case BLDC_State_Running:
 			if (now - gBLDC.start.time > 10)
@@ -146,6 +148,30 @@ void BLDC_Update(void)
  * PRIVATE FUNCTIONS
  */
 
+static void BLDC_Tick(void)
+{
+	if (gBLDC.state == BLDC_State_Starting)
+	{
+		COMP_Deinit(BLDC_COMP);
+		Phase_t phase = MP6532_Step();
+		BLDC_ConfigComp(phase);
+		if (gBLDC.start.freq < 1000)
+		{
+			gBLDC.start.freq += 1;
+			TIM_SetFreq(BLDC_TIM, BLDC_RLD * gBLDC.start.freq);
+		}
+		//else
+		//{
+		//	gBLDC.state = BLDC_State_Running;
+		//	BLDC_EnterRunMode(phase);
+		//}
+	}
+	else
+	{
+		TIM_Stop(BLDC_TIM);
+	}
+}
+
 static void BLDC_EnterRunMode(Phase_t phase)
 {
 	BLDC_ConfigComp(phase);
@@ -160,9 +186,19 @@ static void BLDC_CompIRQ(void)
 {
 	gBLDC.start.time = CORE_GetTick();
 	COMP_Deinit(BLDC_COMP);
-	Phase_t phase = MP6532_Step();
-	BLDC_ConfigComp(phase);
+	//Phase_t phase = MP6532_Step();
+	//BLDC_ConfigComp(phase);
 }
+
+
+// HALL | A B C
+//------|------
+//A     |   - +
+//A B   | + -
+//  B   | +   -
+//  B C |   + -
+//    C | - +
+//A   C | -   +
 
 static void BLDC_ConfigComp(Phase_t phase)
 {
@@ -190,9 +226,10 @@ static void BLDC_ConfigComp(Phase_t phase)
 
 	/*
 	// Wait for comparator to settle.
-	for (int i = 20; i > 0; i--)
+	/*
+	for (int i = 10; i > 0; i--)
 	{
-		if ( !COMP_Read(BLDC_COMP) )
+		if ( COMP_Read(BLDC_COMP) )
 		{
 			// Accelerate the count if we stable.
 			i -= 2;
@@ -200,7 +237,7 @@ static void BLDC_ConfigComp(Phase_t phase)
 	}
 	*/
 
-	CORE_DelayUs(10);
+	CORE_DelayUs(5);
 
 	COMP_OnChange(BLDC_COMP, GPIO_IT_Rising, BLDC_CompIRQ);
 }

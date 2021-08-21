@@ -34,8 +34,15 @@ void Main_HandleLine(char * line)
 	pwm = CLAMP(pwm, 0, 255);
 	freq = CLAMP(freq, 6, 6000);
 
-	BLDC_SetPower(pwm);
-	BLDC_Start(freq);
+	if (pwm == 0 || freq == 0)
+	{
+		BLDC_Stop();
+	}
+	else
+	{
+		BLDC_SetPower(pwm);
+		BLDC_Start(freq);
+	}
 }
 
 int main(void)
