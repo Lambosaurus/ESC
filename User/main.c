@@ -9,6 +9,8 @@
 #include "Line.h"
 #include "BLDC.h"
 
+#include "COMP.h"
+
 #define CLAMP(v, low, high) (v < low ? low : (v > high ? high : v))
 
 #define HALL_TIM	CTL_TIM
@@ -76,11 +78,14 @@ int main(void)
 			UART_WriteStr(COM_UART, bfr);
 		}
 
-		BLDC_Update();
+		bool slp = BLDC_Update();
 		BLDC_State_t state = BLDC_GetState();
 
 		GPIO_Write(LED_GPIO, LED_RED_PIN, state == BLDC_State_Fault);
-		CORE_Idle();
+		if (slp)
+		{
+			CORE_Idle();
+		}
 	}
 }
 

@@ -28,7 +28,7 @@ void BLDC_SetPower(uint8_t power);
 void BLDC_Start(uint32_t freq);
 void BLDC_Stop(void);
 BLDC_State_t BLDC_GetState(void);
-void BLDC_Update(void);
+bool BLDC_Update(void);
 
 /*
  * EXTERN DECLARATIONS
