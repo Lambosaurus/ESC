@@ -21,9 +21,9 @@
 //#define BLDC_COMP_INV
 #define BLDC_COMP			COMP_2
 #define BLDC_COMP_COM		COMP_Neg_IO2
-#define BLDC_COMP_CHA		COMP_Pos_IO2
+#define BLDC_COMP_CHA		COMP_Pos_IO4
 #define BLDC_COMP_CHB		COMP_Pos_IO3
-#define BLDC_COMP_CHC		COMP_Pos_IO4
+#define BLDC_COMP_CHC		COMP_Pos_IO2
 
 
 #ifdef BLDC_COMP_INV
@@ -240,45 +240,22 @@ static void BLDC_CompIRQ(void)
 
 static void BLDC_ConfigComp(Phase_t phase)
 {
-	/*
 	switch (phase)
 	{
 	case Phase_A:  // C -> B
-		COMP_Init(BLDC_COMP, BLDC_COMP_COM | BLDC_COMP_CHA | BLDC_COMP_RISING);
-		break;
-	case Phase_AB: // A -> B
-		COMP_Init(BLDC_COMP, BLDC_COMP_COM | BLDC_COMP_CHC | BLDC_COMP_FALLING);
-		break;
-	case Phase_B:  // A -> C
-		COMP_Init(BLDC_COMP, BLDC_COMP_COM | BLDC_COMP_CHB | BLDC_COMP_RISING);
-		break;
-	case Phase_BC: // B -> C
 		COMP_Init(BLDC_COMP, BLDC_COMP_COM | BLDC_COMP_CHA | BLDC_COMP_FALLING);
 		break;
-	case Phase_C:  // B -> A
-		COMP_Init(BLDC_COMP, BLDC_COMP_COM | BLDC_COMP_CHC | BLDC_COMP_RISING);
-		break;
-	case Phase_CA: // C -> A
-		COMP_Init(BLDC_COMP, BLDC_COMP_COM | BLDC_COMP_CHB | BLDC_COMP_FALLING);
-		break;
-	}
-	*/
-	switch (phase)
-	{
-	case Phase_A:  // C -> B
-		COMP_Init(BLDC_COMP, BLDC_COMP_COM | BLDC_COMP_CHC | BLDC_COMP_FALLING);
-		break;
 	case Phase_AB: // A -> B
-		COMP_Init(BLDC_COMP, BLDC_COMP_COM | BLDC_COMP_CHA | BLDC_COMP_RISING);
+		COMP_Init(BLDC_COMP, BLDC_COMP_COM | BLDC_COMP_CHC | BLDC_COMP_RISING);
 		break;
 	case Phase_B:  // A -> C
 		COMP_Init(BLDC_COMP, BLDC_COMP_COM | BLDC_COMP_CHB | BLDC_COMP_FALLING);
 		break;
 	case Phase_BC: // B -> C
-		COMP_Init(BLDC_COMP, BLDC_COMP_COM | BLDC_COMP_CHC | BLDC_COMP_RISING);
+		COMP_Init(BLDC_COMP, BLDC_COMP_COM | BLDC_COMP_CHA | BLDC_COMP_RISING);
 		break;
 	case Phase_C:  // B -> A
-		COMP_Init(BLDC_COMP, BLDC_COMP_COM | BLDC_COMP_CHA | BLDC_COMP_FALLING);
+		COMP_Init(BLDC_COMP, BLDC_COMP_COM | BLDC_COMP_CHC | BLDC_COMP_FALLING);
 		break;
 	case Phase_CA: // C -> A
 		COMP_Init(BLDC_COMP, BLDC_COMP_COM | BLDC_COMP_CHB | BLDC_COMP_RISING);
@@ -295,7 +272,6 @@ static void BLDC_ConfigComp(Phase_t phase)
 		}
 		CORE_DelayUs(1);
 	}
-	//CORE_DelayUs(5);
 
 	COMP_OnChange(BLDC_COMP, GPIO_IT_Rising, BLDC_CompIRQ);
 }
