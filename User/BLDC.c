@@ -14,9 +14,9 @@
 #define BLDC_TEST_PIN		GPIO_PIN_8
 
 #define BLDC_EN_CLOSED_LOOP
-#define BLDC_OPEN_LOOP_FREQ		500
-#define BLDC_START_RAMP			2
-#define BLDC_STALL_MS		50
+#define BLDC_OPEN_LOOP_FREQ		200
+#define BLDC_START_RAMP			5
+#define BLDC_STALL_MS			(2000 / BLDC_OPEN_LOOP_FREQ)
 
 //#define BLDC_COMP_INV
 #define BLDC_COMP			COMP_2
@@ -34,7 +34,7 @@
 #define BLDC_COMP_FALLING	COMP_Input_Inverted
 #endif
 
-#define BLDC_TIM		TIM_22
+#define BLDC_TIM		TIM_21
 #define BLDC_RLD		256
 
 /*
@@ -64,6 +64,11 @@ static struct {
 		uint32_t steps;
 		uint32_t freq;
 	} start;
+	struct {
+		uint32_t tide;
+		uint32_t count;
+		uint32_t rate;
+	} rate;
 } gBLDC;
 
 /*
@@ -84,7 +89,8 @@ void BLDC_Init(void)
 
 uint32_t BLDC_GetRPM(void)
 {
-	return 0;
+	// In poles per second
+	return gBLDC.rate.rate / 2;
 }
 
 void BLDC_SetPower(uint8_t power)
@@ -104,6 +110,8 @@ void BLDC_Start(uint32_t freq)
 		gBLDC.start.steps = 12;
 		gBLDC.start.freq = freq;
 		gBLDC.state = BLDC_State_Starting;
+		gBLDC.rate.count = 0;
+		gBLDC.rate.tide = CORE_GetTick();
 		MP6532_SetDuty(gBLDC.power);
 		TIM_SetFreq(BLDC_TIM, BLDC_RLD * freq);
 		TIM_Start(BLDC_TIM);
@@ -118,6 +126,7 @@ void BLDC_Stop(void)
 #endif
 	MP6532_SetDuty(0);
 
+	gBLDC.rate.rate = 0;
 	if (gBLDC.state != BLDC_State_Fault)
 	{
 		gBLDC.state = BLDC_State_Idle;
@@ -164,6 +173,16 @@ bool BLDC_Update(void)
 				// Stalled out.
 				BLDC_Stop();
 			}
+
+			uint32_t rateDelta = now - gBLDC.rate.tide;
+			if (rateDelta > 333)
+			{
+				gBLDC.rate.tide = now;
+				uint32_t count = gBLDC.rate.count;
+				gBLDC.rate.count = 0;
+				gBLDC.rate.rate = (count * 1000) / rateDelta;
+			}
+
 			break;
 		}
 	}
@@ -222,9 +241,10 @@ static void BLDC_ExitRunMode(void)
 
 static void BLDC_CompIRQ(void)
 {
-	gBLDC.start.time = CORE_GetTick();
-	COMP_Deinit(BLDC_COMP);
 	Phase_t phase = MP6532_Step();
+	gBLDC.start.time = CORE_GetTick();
+	gBLDC.rate.count += 1;
+	COMP_Deinit(BLDC_COMP);
 	BLDC_ConfigComp(phase);
 }
 
@@ -240,29 +260,6 @@ static void BLDC_CompIRQ(void)
 
 static void BLDC_ConfigComp(Phase_t phase)
 {
-	/*
-	switch (phase)
-	{
-	case Phase_A:  // C -> B
-		COMP_Init(BLDC_COMP, BLDC_COMP_COM | BLDC_COMP_CHA | BLDC_COMP_RISING);
-		break;
-	case Phase_AB: // A -> B
-		COMP_Init(BLDC_COMP, BLDC_COMP_COM | BLDC_COMP_CHC | BLDC_COMP_FALLING);
-		break;
-	case Phase_B:  // A -> C
-		COMP_Init(BLDC_COMP, BLDC_COMP_COM | BLDC_COMP_CHB | BLDC_COMP_RISING);
-		break;
-	case Phase_BC: // B -> C
-		COMP_Init(BLDC_COMP, BLDC_COMP_COM | BLDC_COMP_CHA | BLDC_COMP_FALLING);
-		break;
-	case Phase_C:  // B -> A
-		COMP_Init(BLDC_COMP, BLDC_COMP_COM | BLDC_COMP_CHC | BLDC_COMP_RISING);
-		break;
-	case Phase_CA: // C -> A
-		COMP_Init(BLDC_COMP, BLDC_COMP_COM | BLDC_COMP_CHB | BLDC_COMP_FALLING);
-		break;
-	}
-	*/
 	switch (phase)
 	{
 	case Phase_A:  // C -> B
@@ -293,9 +290,11 @@ static void BLDC_ConfigComp(Phase_t phase)
 			// Accelerate the count if we stable.
 			i -= 5;
 		}
-		CORE_DelayUs(1);
+		else
+		{
+			CORE_DelayUs(1);
+		}
 	}
-	//CORE_DelayUs(5);
 
 	COMP_OnChange(BLDC_COMP, GPIO_IT_Rising, BLDC_CompIRQ);
 }

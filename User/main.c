@@ -22,28 +22,21 @@ static char gLineBuffer[64];
 void Main_HandleLine(char * line)
 {
 	int pwm = atoi(line);
-	int freq = 0;
 	while (*line != ',' && *line != 0)
 	{
 		line++;
 	}
-	if (*line != 0)
-	{
-		line++;
-		freq = atoi(line);
-	}
 
-	pwm = CLAMP(pwm, 0, 255);
-	freq = CLAMP(freq, 6, 6000);
+	pwm = CLAMP(pwm, 0, 256);
 
-	if (pwm == 0 || freq == 0)
+	if (pwm == 0)
 	{
 		BLDC_Stop();
 	}
 	else
 	{
 		BLDC_SetPower(pwm);
-		BLDC_Start(freq);
+		BLDC_Start(100);
 	}
 }
 
